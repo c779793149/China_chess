@@ -15,8 +15,8 @@ class LoginView:
 		self.window.geometry("150x400")
 
 	def create_entry(self):
-		e1 = Entry()
-
+		var = StringVar()
+		e1 = Entry(self.window,)
 
 #登录模块
 class Login:
@@ -96,4 +96,5 @@ def main():
 	# view = LoginView()
 
 if __name__ == "__main__":
-	main()
+	# main()
+	v = LoginView()
