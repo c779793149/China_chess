@@ -2,8 +2,6 @@ import pymysql
 import sys
 
 
-
-
 if __name__=="__main__":
 	addr = sys.argv[1]
 	db = pymysql.connect(addr,"root","123456",charset="utf8")
