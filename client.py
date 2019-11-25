@@ -115,7 +115,7 @@ class Login:
 	#登录之后,循环发送接收消息,后续模块需从此接入
 	def do_chat(self):
 		while True:
-			data = input(">>>")
+			data = input("请输入>>>")
 			if not data:break
 			data = "C" + " " + data
 			self.soc.send(data.encode())
