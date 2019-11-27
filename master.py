@@ -4,7 +4,9 @@ from chess import *
 
 
 class Manager:
-    def __init__(self):
+    def __init__(self,camp,soc):
+        self.camp = camp
+        self.soc = soc
         self.create_chess()
         # self.map = [[self.blank for i in range(9)] for j in range(10)]
         self.chess = [
@@ -42,7 +44,7 @@ class Manager:
             self.rook2_black
         ]
         self.chess.reverse()
-        self.set_map()
+        self.create_map()
 
     def create_chess(self):
         self.rook1_red = Rook("车", "红", (9, 0))
@@ -77,42 +79,46 @@ class Manager:
         self.pawn3_black = Pawn("卒", "黑", (3, 4))
         self.pawn4_black = Pawn("卒", "黑", (3, 6))
         self.pawn5_black = Pawn("卒", "黑", (3, 8))
-        # self.blank = Chess()
 
-    def set_map(self):
+
+    def create_map(self):
         for chess in self.chess:
             # print(chess,":",chess.position)
             r = chess.position[0]
             c = chess.position[1]
             MAP[r][c] = chess
 
-    def output_map(self, camp):
-        if camp == "B": self.map_Matrix_transposition()
+    def output_map(self):
+        if self.camp == "BLACK": self.map_Matrix_transposition()
         for row in MAP:
             for chess in row:
                 print(chess, end=" ")
             print()
-        if camp == "B": self.map_Matrix_transposition()
+        if self.camp == "BLACK": self.map_Matrix_transposition()
 
     def start(self):
+        # while True:
+        #     p = input("请输入阵营(r/b):").upper()
+        #     if p not in ("B", "R"):
+        #         continue
+        #     break
         while True:
-            p = input("请输入阵营(r/b):").upper()
-            if p not in ("B","R"):
-                continue
-            self.output_map(p)
+            self.output_map()
             data = input("请输入操作(输入坐标即可):")
-            os.system("clear")
+            os.system("cls")
             if not data:
                 continue
             else:
                 p0, p1 = data.split(" ")
                 p0 = self.str_to_tuple(p0)
                 p1 = self.str_to_tuple(p1)
-            if p == "B":
+            if self.camp == "B":
                 p0 = (9 - p0[0], 8 - p0[1])
                 p1 = (9 - p1[0], 8 - p1[1])
                 print(p0, p1)
 
+            p0 = self.str_to_tuple(p0)
+            p1 = self.str_to_tuple(p1)
             MAP[p0[0]][p0[1]].run()
             print("当前棋子",MAP[p0[0]][p0[1]],MAP[p0[0]][p0[1]].position)
             print("可移动位置",MAP[p0[0]][p0[1]].choice)
@@ -124,7 +130,7 @@ class Manager:
                 MAP[p0[0]][p0[1]].position = p1
                 MAP[p1[0]][p1[1]] = MAP[p0[0]][p0[1]]
                 MAP[p0[0]][p0[1]] = BLANK
-
+                self.soc.send(data.encode())
             else:
                 print(p1,"非法操作!")
 
@@ -135,12 +141,27 @@ class Manager:
         except:
             return ()
 
+    #倒转棋盘
     def map_Matrix_transposition(self):
+        MAP.reverse()
         for line in MAP:
             line.reverse()
-        MAP.reverse()
 
+    def recv(self):
+        while True:
+            msg = self.soc.recv(1024).decode()
+            p1,p2 = msg.split(" ")
+            p0 = self.str_to_tuple(p1)
+            p1 = self.str_to_tuple(p2)
+            if self.camp == "B":
+                p0 = (9 - p0[0], 8 - p0[1])
+                p1 = (9 - p1[0], 8 - p1[1])
+            MAP[p0[0]][p0[1]].position = p1
+            MAP[p1[0]][p1[1]] = MAP[p0[0]][p0[1]]
+            MAP[p0[0]][p0[1]] = BLANK
+            self.output_map()
 
-if __name__ == "__main__":
-    manager = Manager()
-    manager.start()
+# if __name__ == "__main__":
+#     camp = input("请输入阵营:(RED or BLANK)")
+#     manager = Manager(camp)
+#     manager.start()

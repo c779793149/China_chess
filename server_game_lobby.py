@@ -3,14 +3,15 @@ from tkinter import *
 from select import select
 from threading import Thread
 from time import time,sleep
+from game_room import *
 import sys,os,pymysql
-
 
 class LoginManager:
 	def __init__(self):
 		self.create_soc()
 		self.create_select()
 		self.connect_mysql()
+		self.user_dict = {} #用户名为键,连接套接字为值,方便查找用户
 
 	#创建套接字
 	def create_soc(self):
@@ -34,10 +35,19 @@ class LoginManager:
 		self.sql2 = "select user from user where user=%s and name=%s;"
 		self.sql3 = "insert into user (user,password,name,email,identity_card) values (%s,%s,%s,%s,%s);"
 
-	#开始接口,循环监听客户端请求
-	def start(self):
+	#开始接口,创建2个线程,分别处理注册登录跟游戏任务,子进程之间用消息队列通信.
+	def server_forver(self):
+		thread1 = Thread(target=self.connect_forever)
+		thread2 = Thread(target=self.game_forever)
+		thread1.start()
+		thread2.start()
+		thread1.join(1)
+		thread2.join(1)
+
+	#主要处理登录注册请求
+	def connect_forever(self):
 		while True:
-			self.rs,self.ws,self.xs = select(self.rlist,self.wlist,self.xlist)
+			self.rs, self.ws, self.xs = select(self.rlist, self.wlist, self.xlist)
 			for r in self.rs:
 				if r == self.soc:
 					self.do_connect()
@@ -47,8 +57,9 @@ class LoginManager:
 	#连接客户端
 	def do_connect(self):
 		soc,addr = self.soc.accept()
+		print(soc)
 		self.rlist.append(soc)
-		
+
 	#处理请求
 	def do_request(self,soc):
 		msg = soc.recv(1024).decode()
@@ -75,6 +86,7 @@ class LoginManager:
 			args[0].send(b"NG")
 		elif info ==data:
 			args[0].send(b"OK")
+			self.user_dict[args[0]] =data[0]
 		else:
 			args[0].send(b"FAIL")
 
@@ -92,17 +104,31 @@ class LoginManager:
 				args[0].send(b"FAIL")
 			else:
 				args[0].send(b"OK")
+				self.user_dict[data[0]] = args[0] #用户注册成功直接登录大厅,加入字典
 		else:
 			args[0].send(b"FAIL")
 
 	#登录完毕后,处理消息,待完善
 	def do_chat(self,soc,data):
 		print(data)
+		if data == "OK":
+			return self.play_game(soc)
 		soc.send(b"***")
+
+	#玩家进入游戏大厅后,在游戏大厅收发消息,用进程开比较合适
+	def play_game(self,soc):
+		soc.send(b"OK")
+		self.rlist.remove(soc)
+		self.gamemanager.rlist.append(soc)
+
+	#开启服务器同时开启游戏大厅服务
+	def game_forever(self):
+		self.gamemanager = Gamemanager(self.soc)
+		self.gamemanager.server_forver()
 
 def main():
 	manager = LoginManager()
-	manager.start()
+	manager.server_forver()
 
 if __name__ == "__main__":
 	main()
