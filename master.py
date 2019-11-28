@@ -1,5 +1,5 @@
 import os
-
+from threading import Thread
 from chess import *
 
 
@@ -89,19 +89,16 @@ class Manager:
             MAP[r][c] = chess
 
     def output_map(self):
-        if self.camp == "BLACK": self.map_Matrix_transposition()
+        if self.camp == "黑": self.map_Matrix_transposition()
         for row in MAP:
             for chess in row:
                 print(chess, end=" ")
             print()
-        if self.camp == "BLACK": self.map_Matrix_transposition()
+        if self.camp == "黑": self.map_Matrix_transposition()
 
     def start(self):
-        # while True:
-        #     p = input("请输入阵营(r/b):").upper()
-        #     if p not in ("B", "R"):
-        #         continue
-        #     break
+        p = Thread(target=self.recv)
+        p.start()
         while True:
             self.output_map()
             data = input("请输入操作(输入坐标即可):")
@@ -112,13 +109,11 @@ class Manager:
                 p0, p1 = data.split(" ")
                 p0 = self.str_to_tuple(p0)
                 p1 = self.str_to_tuple(p1)
-            if self.camp == "B":
+            if self.camp == "黑":
                 p0 = (9 - p0[0], 8 - p0[1])
                 p1 = (9 - p1[0], 8 - p1[1])
                 print(p0, p1)
-
-            p0 = self.str_to_tuple(p0)
-            p1 = self.str_to_tuple(p1)
+            if MAP[p0[0]][p0[1]].camp != self.camp:continue
             MAP[p0[0]][p0[1]].run()
             print("当前棋子",MAP[p0[0]][p0[1]],MAP[p0[0]][p0[1]].position)
             print("可移动位置",MAP[p0[0]][p0[1]].choice)
@@ -130,7 +125,7 @@ class Manager:
                 MAP[p0[0]][p0[1]].position = p1
                 MAP[p1[0]][p1[1]] = MAP[p0[0]][p0[1]]
                 MAP[p0[0]][p0[1]] = BLANK
-                self.soc.send(data.encode())
+                self.soc.send(("G " + data).encode())
             else:
                 print(p1,"非法操作!")
 
@@ -150,10 +145,11 @@ class Manager:
     def recv(self):
         while True:
             msg = self.soc.recv(1024).decode()
+            print(msg)
             p1,p2 = msg.split(" ")
             p0 = self.str_to_tuple(p1)
             p1 = self.str_to_tuple(p2)
-            if self.camp == "B":
+            if self.camp == "红":
                 p0 = (9 - p0[0], 8 - p0[1])
                 p1 = (9 - p1[0], 8 - p1[1])
             MAP[p0[0]][p0[1]].position = p1

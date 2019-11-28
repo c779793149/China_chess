@@ -1,7 +1,7 @@
 from socket import *
 from tkinter import *
 from select import select
-from threading import Thread
+from multiprocessing import Process,Queue
 from time import time,sleep
 from game_room import *
 import sys,os,pymysql
@@ -119,11 +119,13 @@ class LoginManager:
 	def play_game(self,soc):
 		soc.send(b"OK")
 		self.rlist.remove(soc)
-		self.gamemanager.rlist.append(soc)
+		self.que.put(soc)
+		# self.gamemanager.rlist.append(soc)
 
 	#开启服务器同时开启游戏大厅服务
 	def game_forever(self):
-		self.gamemanager = Gamemanager(self.soc)
+		self.que = Queue()
+		self.gamemanager = Gamemanager(self.soc,self.que)
 		self.gamemanager.server_forver()
 
 def main():

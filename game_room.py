@@ -3,8 +3,9 @@ from threading import Thread
 from select import select
 
 class Gamemanager:
-    def __init__(self,soc):
+    def __init__(self,soc,que):
         self.soc = soc
+        self.que = que
         self.rlist = []
         self.user_dict = {} #用户名为值,连接套接字为键,方便查找用户
         self.play_user = {} #对局用户,键值均为套接字
@@ -12,28 +13,34 @@ class Gamemanager:
 
     #模块入口,循环接收客户端请求
     def server_forver(self):
+        t1 = Thread(target=self.add_user)
+        t2 = Thread(target=self.do_request)
+        t1.start()
+        t2.start()
+
+
+    def do_request(self):
         self.ws = []
         self.xs = []
         while True:
-            try:
-                print(self.rlist)
-                rs,ws,xs = select(self.rlist,self.ws,self.xs)
-            except:
+            if self.rlist:
+                # print(self.rlist)
+                rs, ws, xs = select(self.rlist, self.ws, self.xs,1)
+            else:
                 continue
+            # print("select已执行")
             for r in rs:
-                msg = r.recv(1024)
+                msg = r.recv(1024).decode()
                 if not msg:
                     self.do_quit()
                 else:
-                    self.do_request(r,msg.decode()) #分类处理具体请求
-
-    def do_request(self,r,msg):
-        print(msg)
-        action,data = msg.split(" ",1)
-        if action == "T":
-            self.get_ready(r,data)
-        elif action == "G":
-            self.play_game(r,data)
+                    print(msg)
+                    action,data = msg.split(" ",1)
+                    if action == "T":
+                        self.get_ready(r,data)
+                    elif action == "G":
+                        print(data)
+                        self.play_game(r,data)
 
     #进入房间入座
     def get_ready(self,r,msg):
@@ -50,6 +57,7 @@ class Gamemanager:
     def verify_table(self,n,r):
         if len(self.table[n-1]) < 2:
             self.table[n-1].append(r)
+            print(self.table)
             r.send(b"OK")
         else:
             r.send(b"NG")
@@ -60,21 +68,27 @@ class Gamemanager:
             # 把对局玩家加入字典,可以快速处理对局信息
             self.play_user[r] = self.table[n-1][0]
             self.play_user[self.table[n-1][0]] = r
-            r.send(b"START RED")
-            self.table[n-1][0].send(b"START BLACK")
+            r.send("START 红".encode())
+            self.table[n-1][0].send("START 黑".encode())
 
     #发送对局信息给对方
     def play_game(self,r,data):
-        self.play_user[r].send(data)
+        self.play_user[r].send(data.encode())
+
+    def add_user(self):
+        while True:
+            soc = self.que.get()
+            print("添加用户",soc)
+            self.rlist.append(soc)
 
     def do_quit(self):
         pass
 
-class User:
-    def __init__(self,soc,user,table=None):
-        self.soc = soc
-        self.user = user
-        self.table = table
+# class User:
+#     def __init__(self,soc,user,table=None):
+#         self.soc = soc
+#         self.user = user
+#         self.table = table
 
 
 

@@ -114,22 +114,22 @@ class Login:
 				pass
 
 	def play_game1(self):
-		while True:
-			self.soc.send(b"C OK")
+		self.soc.send(b"C OK")
+		data = self.soc.recv(1024)
+		print(data)
+		if data == b"OK":
+			time.sleep(1)
+			self.soc.send(b"T 1##IN")
 			data = self.soc.recv(1024)
 			print(data)
 			if data == b"OK":
-				self.soc.send(b"T 1##IN")
-				data = self.soc.recv(1024)
+				self.soc.send(b"T 1##OK")
+				data = self.soc.recv(1024).decode()
 				print(data)
-				if data == b"OK":
-					self.soc.send(b"T 1##OK")
-					data = self.soc.recv(1024).decode()
-					print(data)
-					data = self.soc.recv(1024).decode()
-					print(data)
-					camp = data[1]
-					return self.play_game2(camp)
+				data = self.soc.recv(1024).decode()
+				print(data)
+				camp = data.split(" ")[1]
+				return self.play_game2(camp)
 
 	def play_game2(self,camp):
 		manager = Manager(camp,self.soc)
